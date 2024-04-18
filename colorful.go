@@ -2,6 +2,8 @@ package colorful
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 type Color uint32
@@ -162,7 +164,69 @@ func (c Color) ToRGB() RGB {
 	}
 }
 
-func Println(str string, color Color) {
+func ColorFromHTML(str string) Color {
+	// Strip the # if present.
+	if strings.HasPrefix(str, "#") {
+		str = str[1:]
+	}
+
+	hex, err := strconv.ParseUint(str, 16, 32)
+	if err != nil {
+		// Returns a 'default' white color.
+		return Color(0xFFFFFF) // Assuming white as default
+	}
+
+	return Color(hex)
+}
+
+func ColorFromRGB(r, g, b int) Color {
+	clamp := func(x int) int {
+		if x < 0 {
+			return 0
+		} else if x > 255 {
+			return 255
+		}
+		return x
+	}
+
+	// Convert RGB components to a Color value
+	return Color((clamp(r) << 16) | (clamp(g) << 8) | clamp(b))
+}
+
+func printWithColor(str string, color Color, new bool) {
 	rgb := color.ToRGB()
-	fmt.Println(fmt.Printf("\033[38;2;%d;%d;%dm%s\033[0m\n", rgb.Red, rgb.Green, rgb.Blue, str))
+	format := "\033[38;2;%d;%d;%dm%s\033[0m"
+
+	if new {
+		format += "\n"
+	}
+
+	fmt.Printf(format, rgb.Red, rgb.Green, rgb.Blue, str)
+}
+
+func printAlternating(str string, start, end Color) {
+	colors := []Color{start, end}
+	colorIndex := 0
+
+	for _, char := range str {
+		fmt.Printf("\033[38;5;%dm%c\033[0m", colors[colorIndex], char)
+		colorIndex = (colorIndex + 1) % len(colors)
+	}
+}
+
+func PrintAlternating(str string, start, end Color) {
+	printAlternating(str, start, end)
+}
+
+func PrintlnAlternating(str string, start, end Color) {
+	printAlternating(str, start, end)
+	fmt.Println()
+}
+
+func Println(str string, color Color) {
+	printWithColor(str, color, true)
+}
+
+func Print(str string, color Color) {
+	printWithColor(str, color, false)
 }
